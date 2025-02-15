@@ -462,7 +462,7 @@ const skills = {
 					return player.getHistory("sourceDamage").indexOf(event) == 0 && player.getStorage("remingjian_buff").some(i => i.isIn());
 				},
 				direct: true,
-				content: function* (event, map) {
+				*content(event, map) {
 					const player = map.player;
 					const masters = player
 						.getStorage("remingjian_buff")
@@ -11021,12 +11021,12 @@ const skills = {
 		audio: 2,
 		trigger: {
 			global: "phaseBefore",
-			player: ["enterGame", "phaseBegin", "phaseEnd", "rehuashen"],
+			player: ["enterGame", "phaseBegin", "phaseEnd"],
 		},
 		filter(event, player, name) {
 			if (event.name != "phase") return true;
 			if (name == "phaseBefore") return game.phaseNumber == 0;
-			return player.storage.rehuashen && player.storage.rehuashen.character.length > 0;
+			return player.storage.rehuashen?.character?.length > 0;
 		},
 		direct: true,
 		content() {
@@ -11066,8 +11066,61 @@ const skills = {
 					event.videoId
 				);
 			}
-			event.dialog = ui.create.dialog(get.prompt("rehuashen"), [cards, (item, type, position, noclick, node) => lib.skill.rehuashen.$createButton(item, type, position, noclick, node)]);
+			var dialog = (event.dialog = ui.create.dialog(get.prompt("rehuashen"), [cards, (item, type, position, noclick, node) => lib.skill.rehuashen.$createButton(item, type, position, noclick, node)]));
 			event.dialog.videoId = event.videoId;
+			var buttons = dialog.content.querySelector(".buttons");
+			var array = dialog.buttons.filter(item => !item.classList.contains("nodisplay") && item.style.display !== "none");
+			var choosed = player.storage.rehuashen.choosed;
+			var groups = array
+				.map(i => get.character(i.link).group)
+				.unique()
+				.sort((a, b) => {
+					const getNum = g => (lib.group.includes(g) ? lib.group.indexOf(g) : lib.group.length);
+					return getNum(a) - getNum(b);
+				});
+			if (choosed.length > 0 || groups.length > 1) {
+				event.dialog.style.bottom = (parseInt(event.dialog.style.top || "0", 10) + get.is.phoneLayout() ? 230 : 220) + "px";
+				event.dialog.addPagination({
+					data: array,
+					totalPageCount: groups.length + Math.sign(choosed.length),
+					container: dialog.content,
+					insertAfter: buttons,
+					onPageChange(state) {
+						const { pageNumber, data, pageElement } = state;
+						const { groups, choosed } = pageElement;
+						data.forEach(item => {
+							item.classList[
+								(() => {
+									const name = item.link,
+										goon = choosed.length > 0;
+									if (goon && pageNumber === 1) return choosed.includes(name);
+									const group = get.character(name).group;
+									return groups.indexOf(group) + (1 + goon) === pageNumber;
+								})()
+									? "remove"
+									: "add"
+							]("nodisplay");
+						});
+						ui.update();
+					},
+					pageLimitForCN: ["←", "→"],
+					pageNumberForCN: (choosed.length > 0 ? ["常用"] : []).concat(
+						groups.map(i => {
+							const isChineseChar = char => {
+								const regex = /[\u4e00-\u9fff\u3400-\u4dbf\ud840-\ud86f\udc00-\udfff\ud870-\ud87f\udc00-\udfff\ud880-\ud88f\udc00-\udfff\ud890-\ud8af\udc00-\udfff\ud8b0-\ud8bf\udc00-\udfff\ud8c0-\ud8df\udc00-\udfff\ud8e0-\ud8ff\udc00-\udfff\ud900-\ud91f\udc00-\udfff\ud920-\ud93f\udc00-\udfff\ud940-\ud97f\udc00-\udfff\ud980-\ud9bf\udc00-\udfff\ud9c0-\ud9ff\udc00-\udfff]/u;
+								return regex.test(char);
+							}; //友情提醒：regex为基本汉字区间到扩展G区的Unicode范围的正则表达式，非加密/混淆
+							const str = get.plainText(lib.translate[i + "2"] || lib.translate[i] || "无");
+							return isChineseChar(str.slice(0, 1)) ? str.slice(0, 1) : str;
+						})
+					),
+					changePageEvent: "click",
+					pageElement: {
+						groups: groups,
+						choosed: choosed,
+					},
+				});
+			}
 			if (!event.isMine()) {
 				event.dialog.style.display = "none";
 			}
@@ -11113,9 +11166,7 @@ const skills = {
 			var prompt = event.control == "弃置化身" ? "选择制衡至多两张化身" : "选择要切换的化身";
 			var func = function (id, prompt) {
 				var dialog = get.idDialog(id);
-				if (dialog) {
-					dialog.content.childNodes[0].innerHTML = prompt;
-				}
+				if (dialog) dialog.content.childNodes[0].innerHTML = prompt;
 			};
 			if (player.isOnline2()) {
 				player.send(func, event.videoId, prompt);
@@ -11128,6 +11179,9 @@ const skills = {
 				var func = function (card, id) {
 					var dialog = get.idDialog(id);
 					if (dialog) {
+						//禁止翻页
+						var paginationInstance = dialog.paginationMap?.get(dialog.content.querySelector(".buttons"));
+						if (paginationInstance?.state) paginationInstance.state.pageRefuseChanged = true;
 						for (var i = 0; i < dialog.buttons.length; i++) {
 							if (dialog.buttons[i].link == card) {
 								dialog.buttons[i].classList.add("selectedx");
@@ -11159,6 +11213,9 @@ const skills = {
 				var func = function (id) {
 					var dialog = get.idDialog(id);
 					if (dialog) {
+						//允许翻页
+						var paginationInstance = dialog.paginationMap?.get(dialog.content.querySelector(".buttons"));
+						if (paginationInstance?.state) paginationInstance.state.pageRefuseChanged = false;
 						for (var i = 0; i < dialog.buttons.length; i++) {
 							dialog.buttons[i].classList.remove("selectedx");
 							dialog.buttons[i].classList.remove("unselectable");
@@ -11183,6 +11240,7 @@ const skills = {
 				game.stopCountChoose();
 			}
 			if (event.control == "弃置化身") return;
+			player.storage.rehuashen.choosed.add(event.card);
 			if (player.storage.rehuashen.current != event.card) {
 				const old = player.storage.rehuashen.current;
 				player.storage.rehuashen.current = event.card;
@@ -11213,6 +11271,7 @@ const skills = {
 			if (!player.storage[skill]) {
 				player.storage[skill] = {
 					character: [],
+					choosed: [],
 					map: {},
 				};
 			}
@@ -11598,26 +11657,9 @@ const skills = {
 				.sortBySeat();
 			event.targets2 = event.targets.slice(0);
 			player.lose(card, ui.ordering).relatedEvent = trigger;
-			if (!event.targets.length) event.goto(5);
-			else if (_status.connectMode) event.goto(3);
+			if (!event.targets.length) event.goto(3);
 			event.betrays = [];
 			"step 1";
-			event.target = targets.shift();
-			event.target.chooseButton([event.prompt, [["reguhuo_ally", "reguhuo_betray"], "vcard"]], true, function (button) {
-				var player = _status.event.player;
-				var evt = _status.event.getParent("reguhuo_guess");
-				if (!evt) return Math.random();
-				var ally = button.link[2] == "reguhuo_ally";
-				if (ally && (player.hp <= 1 || get.attitude(player, evt.player) >= 0)) return 1.1;
-				return Math.random();
-			});
-			"step 2";
-			if (result.links[0][2] == "reguhuo_betray") {
-				event.betrays.push(target);
-				target.addExpose(0.2);
-			}
-			event.goto(targets.length ? 1 : 5);
-			"step 3";
 			var list = event.targets.map(function (target) {
 				return [target, [event.prompt, [["reguhuo_ally", "reguhuo_betray"], "vcard"]], true];
 			});
@@ -11636,21 +11678,22 @@ const skills = {
 						links: [["", "", choice]],
 					};
 				});
-			"step 4";
+			"step 2";
 			for (var i in result) {
 				if (result[i].links[0][2] == "reguhuo_betray") {
-					event.betrays.push(lib.playerOL[i]);
-					lib.playerOL[i].addExpose(0.2);
+					var current = (_status.connectMode ? lib.playerOL : game.playerMap)[i];
+					event.betrays.push(current);
+					current.addExpose(0.2);
 				}
 			}
-			"step 5";
+			"step 3";
 			for (var i of event.targets2) {
 				var b = event.betrays.includes(i);
 				i.popup(b ? "质疑" : "不质疑", b ? "fire" : "wood");
 				game.log(i, b ? "#y质疑" : "#g不质疑");
 			}
 			game.delay();
-			"step 6";
+			"step 4";
 			player.showCards(trigger.cards);
 			if (event.betrays.length) {
 				event.betrays.sortBySeat();
@@ -11668,7 +11711,7 @@ const skills = {
 					event.finish();
 				}
 			} else event.finish();
-			"step 7";
+			"step 5";
 			game.delayx();
 		},
 		contentx() {
@@ -12585,7 +12628,7 @@ const skills = {
 			}
 			//else game.cardsDiscard(cards);
 		},
-		subSkill: { buff: { inherit: "reluoyi2", sourceSkill: "new_reluoyi" }, },
+		subSkill: { buff: { inherit: "reluoyi2", sourceSkill: "new_reluoyi" } },
 	},
 	new_rewusheng: {
 		mod: {
@@ -13399,16 +13442,18 @@ const skills = {
 		audioname: ["gz_jun_liubei"],
 		audioname2: { shen_caopi: "rerende_shen_caopi" },
 		enable: "phaseUse",
+		filter(event, player) {
+			return player.countCards("h") && game.hasPlayer(current => get.info("rerende").filterTarget(null, player, current));
+		},
+		filterTarget(card, player, target) {
+			if (player == target) return false;
+			return !player.getStorage("rerende_targeted").includes(target);
+		},
 		filterCard: true,
 		selectCard: [1, Infinity],
 		discard: false,
 		lose: false,
 		delay: false,
-		filterTarget(card, player, target) {
-			if (player.storage.rerende2 && player.storage.rerende2.includes(target)) return false;
-			return player != target;
-		},
-		onremove: ["rerende", "rerende2"],
 		check(card) {
 			if (ui.selected.cards.length && ui.selected.cards[0].name == "du") return 0;
 			if (!ui.selected.cards.length && card.name == "du") return 20;
@@ -13427,109 +13472,27 @@ const skills = {
 			}
 			return 10 - get.value(card);
 		},
-		content() {
-			"step 0";
-			var evt = _status.event.getParent("phaseUse");
-			if (evt && evt.name == "phaseUse" && !evt.rerende) {
-				var next = game.createEvent("rerende_clear");
-				_status.event.next.remove(next);
-				evt.after.push(next);
-				evt.rerende = true;
-				next.player = player;
-				next.setContent(lib.skill.rerende1.content);
-			}
-			if (!Array.isArray(player.storage.rerende2)) {
-				player.storage.rerende2 = [];
-			}
-			player.storage.rerende2.push(target);
-			player.give(cards, target);
-			"step 1";
-			if (typeof player.storage.rerende != "number") {
-				player.storage.rerende = 0;
-			}
-			if (player.storage.rerende >= 0) {
-				player.storage.rerende += cards.length;
-				if (player.storage.rerende >= 2) {
-					var list = [];
-					if (
-						lib.filter.cardUsable({ name: "sha" }, player, event.getParent("chooseToUse")) &&
-						game.hasPlayer(function (current) {
-							return player.canUse("sha", current);
-						})
-					) {
-						list.push(["基本", "", "sha"]);
-					}
-					for (var i of lib.inpile_nature) {
-						if (
-							lib.filter.cardUsable({ name: "sha", nature: i }, player, event.getParent("chooseToUse")) &&
-							game.hasPlayer(function (current) {
-								return player.canUse({ name: "sha", nature: i }, current);
-							})
-						) {
-							list.push(["基本", "", "sha", i]);
-						}
-					}
-					if (
-						lib.filter.cardUsable({ name: "tao" }, player, event.getParent("chooseToUse")) &&
-						game.hasPlayer(function (current) {
-							return player.canUse("tao", current);
-						})
-					) {
-						list.push(["基本", "", "tao"]);
-					}
-					if (
-						lib.filter.cardUsable({ name: "jiu" }, player, event.getParent("chooseToUse")) &&
-						game.hasPlayer(function (current) {
-							return player.canUse("jiu", current);
-						})
-					) {
-						list.push(["基本", "", "jiu"]);
-					}
-					if (list.length) {
-						player.chooseButton(["是否视为使用一张基本牌？", [list, "vcard"]]).set("ai", function (button) {
-							var player = _status.event.player;
-							var card = {
-								name: button.link[2],
-								nature: button.link[3],
-								isCard: true,
-							};
-							if (card.name == "tao") {
-								if (player.hp == 1 || (player.hp == 2 && !player.hasShan()) || player.needsToDiscard()) {
-									return 5;
-								}
-								return 1;
-							}
-							if (card.name == "sha") {
-								if (
-									game.hasPlayer(function (current) {
-										return player.canUse(card, current) && get.effect(current, card, player, player) > 0;
-									})
-								) {
-									if (card.nature == "fire") return 2.95;
-									if (card.nature == "thunder" || card.nature == "ice") return 2.92;
-									return 2.9;
-								}
-								return 0;
-							}
-							if (card.name == "jiu") {
-								return 0.5;
-							}
-							return 0;
-						});
-					} else {
-						event.finish();
-					}
-					player.storage.rerende = -1;
-				} else {
-					event.finish();
-				}
-			} else {
-				event.finish();
-			}
-			"step 2";
-			if (result && result.bool && result.links[0]) {
-				var card = { name: result.links[0][2], nature: result.links[0][3] };
-				player.chooseUseTarget(card, true);
+		async content(event, trigger, player) {
+			const { target, cards, name } = event;
+			player.addTempSkill(name + "_targeted", "phaseUseAfter");
+			player.markAuto(name + "_targeted", [target]);
+			let num = 0;
+			player.getHistory("lose", evt => {
+				if (evt.getParent(2).name == name) num += evt.cards.length;
+			});
+			await player.give(cards, target);
+			const list = get.inpileVCardList(info => {
+				return get.type(info[2]) == "basic" && player.hasUseTarget(new lib.element.VCard({ name: info[2], nature: info[3] }), null, true);
+			});
+			if (num < 2 && num + cards.length > 1 && list.length) {
+				const links = await player
+					.chooseButton(["是否视为使用一张基本牌？", [list, "vcard"]])
+					.set("ai", button => {
+						return get.player().getUseValue({ name: button.link[2], nature: button.link[3], isCard: true });
+					})
+					.forResultLinks();
+				if (!links?.length) return;
+				await player.chooseUseTarget(get.autoViewAs({ name: links[0][2], nature: links[0][3], isCard: true }), true);
 			}
 		},
 		ai: {
@@ -13573,14 +13536,11 @@ const skills = {
 			},
 			threaten: 0.8,
 		},
-	},
-	rerende1: {
-		trigger: { player: "phaseUseBegin" },
-		silent: true,
-		sourceSkill: "rerende",
-		content() {
-			player.storage.rerende = 0;
-			player.storage.rerende2 = [];
+		subSkill: {
+			targeted: {
+				onremove: true,
+				charlotte: true,
+			},
 		},
 	},
 	liyu: {

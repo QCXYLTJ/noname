@@ -146,7 +146,7 @@ const skills = {
 	clananran: {
 		audio: 2,
 		trigger: {
-			player: ["phaseUseBegin", "damageBegin"],
+			player: ["phaseUseBegin", "damageEnd"],
 		},
 		async cost(event, trigger, player) {
 			const count = Math.min(4, player.countMark("clananran_used") + 1);
@@ -210,11 +210,11 @@ const skills = {
 					player.removeGaintag(skill);
 				},
 				mod: {
-					cardEnabled(card, player, result) {
-						if (get.itemtype(card) == "vcard" && Array.isArray(card.cards)) {
-							if (card.cards.some(c => c.hasGaintag("clananran_tag"))) return false;
-						}
-						if (card.hasGaintag("clananran_tag")) return false;
+					cardEnabled(card) {
+						if ([card].concat(card.cards || []).some(c => get.itemtype(c) === "card" && c.hasGaintag("clananran_tag"))) return false;
+					},
+					cardSavable(card) {
+						if ([card].concat(card.cards || []).some(c => get.itemtype(c) === "card" && c.hasGaintag("clananran_tag"))) return false;
 					},
 				},
 			},
@@ -251,7 +251,10 @@ const skills = {
 							],
 							true
 						)
-						.set("discarded", discarded.filter(c => target.hasUseTarget(c)))
+						.set(
+							"discarded",
+							discarded.filter(c => target.hasUseTarget(c))
+						)
 						.set("ai", button => {
 							const { player, discarded: cards } = get.event();
 							return {
@@ -262,9 +265,12 @@ const skills = {
 						.forResult()
 				: { bool: true, links: ["loseHp"] };
 			if (result.links[0] == "sha") {
-				const result2 = await target.chooseCardButton("告变：请选择其中一张【杀】使用", discarded, true).set("filterButton", button => {
-					return get.player().hasUseTarget(button.link);
-				}).forResult();
+				const result2 = await target
+					.chooseCardButton("告变：请选择其中一张【杀】使用", discarded, true)
+					.set("filterButton", button => {
+						return get.player().hasUseTarget(button.link);
+					})
+					.forResult();
 				if (result2?.bool && result2.links?.length) await target.chooseUseTarget(result2.links[0], true, false);
 			} else await target.loseHp();
 		},

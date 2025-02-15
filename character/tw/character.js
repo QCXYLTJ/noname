@@ -1,4 +1,5 @@
 const characters = {
+	tw_simashi: ["male", "wei", 4, ["baiyi", "twjinglve", "shanli"], ["name:司马|师", "border:jin", "die:simashi"]],
 	tw_sb_caopi: ["male", "wei", 3, ["twxingshang", "twfangzhu", "twsongwei"], ["zhu", "die:sb_caopi"]],
 	tw_sb_sp_zhugeliang: ["male", "shu", 3, ["sbhuoji", "twkanpo"], ["name:诸葛|亮", "die:sb_sp_zhugeliang"]],
 	huan_dingshangwan: ["female", "wei", 3, ["twshshiyi", "twchunhui"]],
@@ -103,7 +104,7 @@ const characters = {
 	tw_wujing: ["male", "wu", 4, ["twfenghan", "twcongji"], ["die:wujing"]],
 	tw_wangcan: ["male", "wei", 3, ["twdianyi", "twyingji", "twshanghe"]],
 	tw_wangchang: ["male", "wei", 3, ["twkaiji", "twshepan"], ["clan:太原王氏"]],
-	tw_caozhao: ["male", "wei", 4, ["twfuzuan", "twchongqi"]],
+	tw_caozhao: ["male", "wei", 4, ["twfuzuan", "twchongqi", "twfeifu"]],
 	tw_guohuai: ["male", "wei", 4, ["twjingce", "yuzhang"], ["die:guohuai"]],
 	tw_chengpu: ["male", "wu", 4, ["twlihuo", "twchunlao"], ["die:chengpu"]],
 	tw_zhangmancheng: ["male", "qun", 4, ["twfengji", "twyiju", "twbudao"]],

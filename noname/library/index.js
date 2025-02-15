@@ -9,7 +9,7 @@
  * @typedef { InstanceType<typeof lib.element.NodeWS> } NodeWS
  * @typedef { InstanceType<typeof lib.element.Control> } Control
  */
-import { nonameInitialized, assetURL, userAgent, GeneratorFunction, AsyncFunction, characterDefaultPicturePath } from "../util/index.js";
+import { nonameInitialized, assetURL, userAgentLowerCase, GeneratorFunction, AsyncFunction, characterDefaultPicturePath } from "../util/index.js";
 import { ai } from "../ai/index.js";
 import { get } from "../get/index.js";
 import { game } from "../game/index.js";
@@ -37,7 +37,7 @@ export class Library {
 	mirrorURL = updateURLs.coding;
 	hallURL = "";
 	assetURL = assetURL;
-	userAgent = userAgent;
+	userAgent = userAgentLowerCase;
 	characterDefaultPicturePath = characterDefaultPicturePath;
 	compatibleEdition = Boolean(typeof nonameInitialized == "string" && nonameInitialized.match(/\/(?:com\.widget|yuri\.nakamura)\.noname\//));
 	changeLog = [];
@@ -178,6 +178,9 @@ export class Library {
 		xiaotao_emotion: 20,
 		xiaojiu_emotion: 20,
 		biexiao_emotion: 18,
+		chaijun_emotion: 43,
+		huangdou_emotion: 20,
+		maoshu_emotion: 18,
 	};
 	animate = {
 		skill: {},
@@ -3212,6 +3215,12 @@ export class Library {
 					intro: "开启后出现属性伤害、回复体力等情况时会显示动画",
 					init: false,
 					unfrequent: true,
+				},
+				card_animation_info: {
+					name: "卡牌动画信息(Beta)",
+					intro: "开启后会在卡牌动画中显示一些信息来源并启用虚拟牌动画(Beta测试功能，如遇异常可关闭该功能)",
+					init: false,
+					unfrequent: false,
 				},
 				skill_animation_type: {
 					name: "技能特效",
@@ -9708,6 +9717,9 @@ export class Library {
 		xiaojiu_emotion: "小酒表情",
 		xiaokuo_emotion: "小扩表情",
 		biexiao_emotion: "憋笑表情",
+		chaijun_emotion: "柴郡表情",
+		huangdou_emotion: "黄豆表情",
+		maoshu_emotion: "猫鼠表情",
 
 		pause: "暂停",
 		config: "选项",
@@ -12102,97 +12114,6 @@ export class Library {
 						}, time);
 					}
 				}, trigger.discardid);
-			},
-		},
-		_save: {
-			//trigger:{source:'dying2',player:'dying2'},
-			priority: 5,
-			forced: true,
-			popup: false,
-			silent: true,
-			filter: function (event, player) {
-				//if(!event.player.isDying()) return false;
-				//if(event.source&&event.source.isIn()&&event.source!=player) return false;
-				//return true;
-				return false;
-			},
-			content: function () {
-				"step 0";
-				event.dying = trigger.player;
-				if (!event.acted) event.acted = [];
-				"step 1";
-				if (trigger.player.isDead()) {
-					event.finish();
-					return;
-				}
-				event.acted.push(player);
-				var str = get.translation(trigger.player) + "濒死，是否帮助？";
-				var str2 = "当前体力：" + trigger.player.hp;
-				if (lib.config.tao_enemy && event.dying.side != player.side && lib.config.mode != "identity" && lib.config.mode != "guozhan" && !event.dying.hasSkillTag("revertsave")) {
-					event._result = { bool: false };
-				} else if (player.canSave(event.dying)) {
-					player.chooseToUse({
-						filterCard: function (card, player, event) {
-							event = event || _status.event;
-							return lib.filter.cardSavable(card, player, event.dying);
-						},
-						filterTarget: function (card, player, target) {
-							if (target != _status.event.dying) return false;
-							if (!card) return false;
-							var info = get.info(card);
-							if (!info.singleCard || ui.selected.targets.length == 0) {
-								var mod = game.checkMod(card, player, target, "unchanged", "playerEnabled", player);
-								if (mod == false) return false;
-								var mod = game.checkMod(card, player, target, "unchanged", "targetEnabled", target);
-								if (mod != "unchanged") return mod;
-							}
-							return true;
-						},
-						prompt: str,
-						prompt2: str2,
-						ai1: function (card) {
-							if (typeof card == "string") {
-								var info = get.info(card);
-								if (info.ai && info.ai.order) {
-									if (typeof info.ai.order == "number") {
-										return info.ai.order;
-									} else if (typeof info.ai.order == "function") {
-										return info.ai.order();
-									}
-								}
-							}
-							return 1;
-						},
-						ai2: function (target) {
-							let effect_use = get.effect_use(target);
-							if (effect_use <= 0) return effect_use;
-							return get.effect(target);
-						},
-						type: "dying",
-						targetRequired: true,
-						dying: event.dying,
-					});
-				} else {
-					event._result = { bool: false };
-				}
-				"step 2";
-				if (result.bool) {
-					var player = trigger.player;
-					if (player.hp <= 0 && !trigger.nodying && !player.nodying && player.isAlive() && !player.isOut() && !player.removed) event.goto(0);
-					else trigger.untrigger();
-				} else {
-					for (var i = 0; i < 20; i++) {
-						if (event.acted.includes(event.player.next)) {
-							break;
-						} else {
-							event.player = event.player.next;
-							if (!event.player.isOut()) {
-								event.goto(1);
-								break;
-							}
-						}
-					}
-				}
 			},
 		},
 		_ismin: {

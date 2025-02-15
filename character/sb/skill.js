@@ -2796,7 +2796,7 @@ const skills = {
 			return game.hasPlayer(target => target != player && !target.isZhu2());
 		},
 		direct: true,
-		content: function* (event, map) {
+		*content(event, map) {
 			var player = map.player;
 			var result = yield player
 				.chooseTarget(get.prompt("sbwusheng"), "选择一名非主公的其他角色，本阶段对其使用【杀】无距离和次数限制，使用【杀】指定其为目标后摸" + (get.mode() === "identity" ? "两" : "一") + "张牌，对其使用三张【杀】后不能对其使用【杀】", (card, player, target) => {
@@ -3306,7 +3306,7 @@ const skills = {
 		},
 		forced: true,
 		locked: false,
-		content: function* (event, map) {
+		*content(event, map) {
 			var player = map.player,
 				storage = player.storage.sbkanpo;
 			var sum = storage[0];
@@ -6206,16 +6206,13 @@ const skills = {
 		},
 		subSkill: {
 			true1: {
-				audio: "sbduanliang",
-				logAudio: () => "sbduanliang2.mp3",
+				audio: "sbduanliang2.mp3",
 			},
 			true2: {
-				audio: "sbduanliang",
-				logAudio: () => "sbduanliang3.mp3",
+				audio: "sbduanliang3.mp3",
 			},
 			false: {
-				audio: "sbduanliang",
-				logAudio: () => "sbduanliang4.mp3",
+				audio: "sbduanliang4.mp3",
 			},
 		},
 	},
@@ -6408,16 +6405,13 @@ const skills = {
 		},
 		subSkill: {
 			true1: {
-				audio: "sbtieji",
-				logAudio: () => "sbtieji2.mp3",
+				audio: "sbtieji2.mp3",
 			},
 			true2: {
-				audio: "sbtieji",
-				logAudio: () => "sbtieji3.mp3",
+				audio: "sbtieji3.mp3",
 			},
 			false: {
-				audio: "sbtieji",
-				logAudio: () => "sbtieji4.mp3",
+				audio: "sbtieji4.mp3",
 			},
 		},
 	},

@@ -10,8 +10,10 @@ import { ui } from "../ui/index.js";
  * @returns {HTMLElement}
  */
 HTMLElement.prototype.setNodeIntro = function (title, content) {
-	this.classList.add('nodeintro');
+	this.classList.add("nodeintro");
+	// @ts-expect-error ThereBe
 	this.nodeTitle = title;
+	// @ts-expect-error ThereBe
 	this.nodeContent = content;
 	if (!lib.config.touchscreen) {
 		if (lib.config.hover_all) {
@@ -43,7 +45,7 @@ HTMLDivElement.prototype.animate = function (keyframes, options) {
  */
 HTMLDivElement.prototype.addTempClass = function (name, time = 1000) {
 	// @ts-ignore
-	let that = get.is.mobileMe(this) && name == "target" ? ui.mebg : this;
+	let that = get.is.mobileMe(this) && name === "target" ? ui.mebg : this;
 	that.classList.add(name);
 	setTimeout(() => {
 		that.classList.remove(name);
@@ -147,7 +149,7 @@ Reflect.defineProperty(HTMLDivElement.prototype, "setBackground", {
 	value(name, type, ext, subfolder) {
 		if (!name) return this;
 		let src;
-		if (ext == "noskin") ext = ".jpg";
+		if (ext === "noskin") ext = ".jpg";
 		ext = ext || ".jpg";
 		subfolder = subfolder || "default";
 		if (type) {
@@ -157,10 +159,10 @@ Reflect.defineProperty(HTMLDivElement.prototype, "setBackground", {
 				nameinfo,
 				gzbool = false;
 			const mode = get.mode();
-			if (type == "character") {
+			if (type === "character") {
 				nameinfo = get.character(name);
 				if (lib.characterPack[`mode_${mode}`] && lib.characterPack[`mode_${mode}`][name]) {
-					if (mode == "guozhan") {
+					if (mode === "guozhan") {
 						if (name.startsWith("gz_shibing")) name = name.slice(3, 11);
 						else {
 							if (lib.config.mode_config.guozhan.guozhanSkin && nameinfo && nameinfo.hasSkinInGuozhan) {
@@ -204,11 +206,11 @@ Reflect.defineProperty(HTMLDivElement.prototype, "setBackground", {
 			if (imgPrefixUrl) src = imgPrefixUrl;
 			else if (extimage) src = extimage.replace(/^ext:/, "extension/");
 			else if (dbimage) {
-				this.setBackgroundDB(dbimage.slice(3));
+				this.setBackgroundDB(dbimage.slice(3)).then(lib.filter.none);
 				return this;
 			} else if (modeimage) src = `image/mode/${modeimage}/character/${name}${ext}`;
-			else if (type == "character" && lib.config.skin[name] && arguments[2] != "noskin") src = `image/skin/${name}/${lib.config.skin[name]}${ext}`;
-			else if (type == "character") {
+			else if (type === "character" && lib.config.skin[name] && arguments[2] !== "noskin") src = `image/skin/${name}/${lib.config.skin[name]}${ext}`;
+			else if (type === "character") {
 				src = `image/character/${gzbool ? "gz_" : ""}${name}${ext}`;
 			} else src = `image/${type}/${subfolder}/${name}${ext}`;
 		} else src = `image/${name}${ext}`;
@@ -228,12 +230,11 @@ Reflect.defineProperty(HTMLDivElement.prototype, "setBackground", {
  * @this HTMLDivElement
  * @type { typeof HTMLDivElement['prototype']['setBackgroundDB'] }
  */
-HTMLDivElement.prototype.setBackgroundDB = function (img) {
-	return game.getDB("image", img).then(src => {
-		this.style.backgroundImage = `url('${src}')`;
-		this.style.backgroundSize = "cover";
-		return this;
-	});
+HTMLDivElement.prototype.setBackgroundDB = async function (img) {
+	let src = await game.getDB("image", img);
+	this.style.backgroundImage = `url('${src}')`;
+	this.style.backgroundSize = "cover";
+	return this;
 };
 /**
  * @this HTMLDivElement
@@ -241,7 +242,10 @@ HTMLDivElement.prototype.setBackgroundDB = function (img) {
  */
 HTMLDivElement.prototype.setBackgroundImage = function (img) {
 	if (Array.isArray(img)) {
-		this.style.backgroundImage = img.unique().map(v => `url("${lib.assetURL}${v}")`).join(",");
+		this.style.backgroundImage = img
+			.unique()
+			.map(v => `url("${lib.assetURL}${v}")`)
+			.join(",");
 	} else if (URL.canParse(img)) {
 		this.style.backgroundImage = `url("${img}")`;
 	} else {
@@ -302,20 +306,23 @@ HTMLDivElement.prototype.listenTransition = function (func, time) {
   - 将条件运算符的结果直接嵌入到模板字符串中，取代了之前使用字符串拼接的方式喵。
   //最后，宝贝看一下我的理解有问题吗？🥺
  */
-HTMLDivElement.prototype.setPosition = function () {
-	var position;
-	if (arguments.length === 4) {
-		position = Array.from(arguments);
-	} else if (arguments.length === 1 && Array.isArray(arguments[0]) && arguments[0].length === 4) {
-		position = arguments[0];
+HTMLDivElement.prototype.setPosition = function (...args) {
+	let position;
+	if (args.length === 4) {
+		position = args;
 	} else {
-		return this;
+		// noinspection JSUnresolvedReference
+		if (args.length === 1 && Array.isArray(args[0]) && args[0].length === 4) {
+			position = args[0];
+		} else {
+			return this;
+		}
 	}
 
 	const [topPercent, topOffset, leftPercent, leftOffset] = position;
 
-	this.style.top = `calc(${topPercent}% ${topOffset > 0 ? '+ ' : '- '}${Math.abs(topOffset)}px)`;
-	this.style.left = `calc(${leftPercent}% ${leftOffset > 0 ? '+ ' : '- '}${Math.abs(leftOffset)}px)`;
+	this.style.top = `calc(${topPercent}% ${topOffset > 0 ? "+ " : "- "}${Math.abs(topOffset)}px)`;
+	this.style.left = `calc(${leftPercent}% ${leftOffset > 0 ? "+ " : "- "}${Math.abs(leftOffset)}px)`;
 
 	return this;
 };
@@ -324,8 +331,8 @@ HTMLDivElement.prototype.setPosition = function () {
  * @type { typeof HTMLElement['prototype']['css'] }
  */
 HTMLElement.prototype.css = function (style) {
-	for (var i in style) {
-		if (i == "innerHTML" && typeof style["innerHTML"] == "string") {
+	for (const i in style) {
+		if (i === "innerHTML" && typeof style["innerHTML"] == "string") {
 			this.innerHTML = style["innerHTML"];
 		} else {
 			this.style[i] = style[i];
@@ -335,18 +342,23 @@ HTMLElement.prototype.css = function (style) {
 };
 /**
  * @this HTMLTableElement
- * @type { typeof HTMLTableElement['prototype']['get'] }
+ * @param {number} row
+ * @param {number} col
+ * @returns {HTMLElement | void}
  */
+// @ts-expect-error OnType
 HTMLTableElement.prototype.get = function (row, col) {
 	if (row < this.childNodes.length) {
 		// @ts-ignore
-		return this.childNodes[row].childNodes[col];
+		return /** @type {HTMLElement | void} */ this.childNodes[row].childNodes[col];
 	}
 };
 /*处理lib.nature等从array改为map的兼容性问题*/
 /**
- * @this Map<any, any>
- * @type { typeof Map['prototype']['contains'] }
+ * @this Map
+ * @template T
+ * @param { T } item
+ * @returns { boolean }
  */
 const mapHasFunc = function (item) {
 	console.trace(this, "已经从array改为map，请改为使用has方法");
@@ -365,8 +377,11 @@ Object.defineProperty(Map.prototype, "includes", {
 	value: mapHasFunc,
 });
 /**
- * @this Map<any, any>
- * @type { typeof Map['prototype']['add'] }
+ * @this Map
+ * @template T
+ * @template K
+ * @param { T } item
+ * @returns { Map<T, K> }
  */
 const mapAddFunc = function (item) {
 	console.trace(this, "已经从array改为map，请改为使用set方法");
@@ -390,12 +405,16 @@ Object.defineProperty(Map.prototype, "addArray", {
 	enumerable: false,
 	writable: true,
 	/**
-	 * @this Map<any, any>
-	 * @type { typeof Map['prototype']['addArray'] }
+	 * @this Map
+	 * @template T
+	 * @template U
+	 * @param { T[] } arr
+	 * @returns { Map<T, U> }
 	 */
 	value(arr) {
+		console.trace(this, "已经从array改为map，请改为使用set方法");
 		for (let i = 0; i < arr.length; i++) {
-			this.add(arr[i]);
+			this.set(arr[i], 0);
 		}
 		return this;
 	},
@@ -405,8 +424,11 @@ Object.defineProperty(Map.prototype, "remove", {
 	enumerable: false,
 	writable: true,
 	/**
-	 * @this Map<any, any>
-	 * @type { typeof Map['prototype']['remove'] }
+	 * @this Map
+	 * @template T
+	 * @template U
+	 * @param { T } item
+	 * @returns { Map<T, U> }
 	 */
 	value(item) {
 		console.trace(this, "已经从array改为map，请改为使用delete方法");
@@ -465,11 +487,14 @@ Object.defineProperty(Array.prototype, "contains", {
 	enumerable: false,
 	writable: true,
 	/**
-	 * @this any[]
-	 * @type { typeof Array['prototype']['contains'] }
+	 * @this T[]
+	 * @template T
+	 * @param { T[] } args
+	 * @returns { boolean }
 	 */
 	value(...args) {
 		console.warn(this, "Array的contains方法已废弃，请使用includes方法");
+		// @ts-ignore
 		return this.includes(...args);
 	},
 });
@@ -537,17 +562,20 @@ Object.defineProperty(Array.prototype, "remove", {
 	 * @this any[]
 	 * @type { typeof Array['prototype']['remove'] }
 	 */
-	value() {
-		for (const item of arguments) {
-			let pos = -1;
+	value(...args) {
+		for (const item of args) {
+			let pos;
+
 			if (typeof item == "number" && isNaN(item)) {
 				pos = this.findIndex(v => isNaN(v));
 			} else {
 				pos = this.indexOf(item);
 			}
-			if (pos == -1) continue;
+
+			if (pos === -1) continue;
 			this.splice(pos, 1);
 		}
+
 		return this;
 	},
 });
@@ -600,9 +628,14 @@ Object.defineProperty(Array.prototype, "randomGet", {
 	 * @this any[]
 	 * @type { typeof Array['prototype']['randomGet'] }
 	 */
-	value() {
-		let arr = this.slice(0);
-		arr.removeArray(Array.from(arguments));
+	value(...excludes) {
+		let arr = this;
+
+		if (excludes.length > 0) {
+			arr = this.slice(0);
+			arr.removeArray(Array.from(arguments));
+		}
+
 		return arr[Math.floor(Math.random() * arr.length)];
 	},
 });
@@ -654,13 +687,13 @@ Object.defineProperty(Array.prototype, "randomSort", {
 	 * @type { typeof Array['prototype']['randomSort'] }
 	 */
 	value() {
-		let list = [];
-		while (this.length) {
-			list.push(this.randomRemove());
+		for (let i = this.length; i > 1; --i) {
+			const index = /* randInt(0, i); */ Math.floor(Math.random() * i);
+			const temp = this[i - 1];
+			this[i - 1] = this[index];
+			this[index] = temp;
 		}
-		for (let i = 0; i < list.length; i++) {
-			this.push(list[i]);
-		}
+
 		return this;
 	},
 });
@@ -673,6 +706,7 @@ Object.defineProperty(Array.prototype, "sortBySeat", {
 	 * @type { typeof Array['prototype']['sortBySeat'] }
 	 */
 	value(target) {
+		// @ts-expect-error TypeCorrect
 		lib.tempSortSeat = target;
 		this.sort(lib.sort.seat);
 		delete lib.tempSortSeat;
